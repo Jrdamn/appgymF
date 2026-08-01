@@ -37,7 +37,6 @@ Permite el acceso al sistema mediante credenciales de correo electronico y contr
 * Creacion de cuentas exclusivas de cliente.
 * Persistencia segura de credenciales de inicio de sesion.
 
-*(Coloque aqui la captura de pantalla de la interfaz de inicio de sesion y del formulario de registro)*
 ![Pantalla de Login y Registro](./manual_media/login_registro.png)
 
 ---
@@ -48,7 +47,6 @@ Pantalla de inicio que adapta sus opciones y metricas segun el rol del usuario a
 2. **Vista de Coach**: Muestra el contador de personas entrenando hoy dentro del gimnasio y permite buscar en la lista de clientes.
 3. **Vista de Administrador**: Incluye graficos y metricas de ventas en colones, el contador de visitas diarias, alertas de inventario bajo y el boton para descargar reportes en PDF.
 
-*(Coloque aqui la captura de pantalla del Dashboard segun el rol de Administrador, Coach o Cliente)*
 ![Dashboard Principal](./manual_media/dashboard.png)
 
 ---
@@ -59,7 +57,6 @@ Modulo de seguridad para registrar el ingreso y salida del gimnasio en tiempo re
 2. **Escaner Integrado**: El Coach o Administrador abre la camara dentro de la aplicacion para escanear el QR del cliente, registrando el timestamp de entrada o salida.
 3. **Escaneo Externo**: Si el QR es escaneado por una camara convencional, se abre un portal web en el navegador del dispositivo que solicita el PIN de recepcion (1234) para validar y registrar la visita de forma segura.
 
-*(Coloque aqui las capturas de pantalla de la vista del codigo QR del cliente, el escaner de la aplicacion y la pantalla web de validacion de PIN)*
 ![Modulo de Accesos QR](./manual_media/accesos_qr.png)
 
 ---
@@ -70,7 +67,6 @@ Facilita la asignacion y ejecucion de rutinas deportivas:
 2. **Notificaciones**: Al guardarse una rutina, el cliente recibe una notificacion flotante dentro de la aplicacion y un correo de confirmacion.
 3. **Reproductor paso a paso**: El cliente inicia la rutina y visualiza una guia interactiva que contiene la animacion en formato GIF del ejercicio, series, repeticiones, peso y una barra de progreso.
 
-*(Coloque aqui las capturas de pantalla de la asignacion de ejercicios por el Coach, el banner de notificacion en el inicio del cliente y el reproductor de rutina con animaciones GIF)*
 ![Gestion de Rutinas y Reproductor](./manual_media/rutinas_reproductor.png)
 
 ---
@@ -80,7 +76,6 @@ Punto de venta y comercio electronico de suplementacion deportiva:
 1. **Compra del Cliente**: Catalogo de suplementos con tarjetas visuales, control de stock y carrito de compras integrado. Al completar el pago, el cliente recibe un comprobante PDF con precios en colones (₡).
 2. **Punto de Venta Administrativo**: El Administrador puede realizar ventas directas en recepcion y actualizar cantidades o precios del inventario.
 
-*(Coloque aqui las capturas de la tienda de suplementos del cliente, el carrito de compras con el total en colones, y la pantalla de control de inventario del administrador)*
 ![Tienda Virtual Shark Store](./manual_media/tienda_store.png)
 
 ---
@@ -90,7 +85,6 @@ Permite a los usuarios gestionar su informacion personal y fisica:
 * **Ficha Fisica**: Campos dedicados para actualizar el peso (kg) y la estatura (cm).
 * **Foto Circular**: El usuario puede subir una foto personalizada desde la galeria de su celular (utilizando expo-image-picker con compresion Base64) o seleccionar uno de los avatares preestablecidos de atletas.
 
-*(Coloque aqui la captura de la pantalla de perfil, el selector de avatares, y la edicion de peso y estatura)*
 ![Modulo de Perfil y Ajustes](./manual_media/perfil_ajustes.png)
 
 ---
@@ -101,7 +95,6 @@ Modulo para habilitar el pase digital de acceso:
 * **Tarjetas Bancarias**: Formulario de registro seguro con mascara de entrada y enmascaramiento.
 * **PayPal**: Al presionar vincular cuenta, se despliega el portal de PayPal en el navegador del dispositivo para simular el inicio de sesion. Al volver al app, el correo se registra de forma automatica.
 
-*(Coloque aqui las capturas de la seleccion de planes, el formulario de vinculacion de tarjetas y la pantalla de PayPal en el navegador)*
 ![Planes y Metodos de Pago](./manual_media/planes_pagos.png)
 
 ---
