@@ -1,21 +1,21 @@
 {
   "expo": {
-    "name": "login_app",
+    "name": "Shark Gym",
     "slug": "login_app",
     "version": "1.0.0",
     "orientation": "portrait",
-    "icon": "./assets/images/icon.png",
+    "icon": "./assets/images/logo-custom.png",
     "scheme": "loginapp",
     "userInterfaceStyle": "automatic",
     "ios": {
       "icon": "./assets/expo.icon"
     },
     "android": {
+      "package": "com.jrdamn.sharkgym",
+      "googleServicesFile": "./google-services.json",
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
-        "foregroundImage": "./assets/images/android-icon-foreground.png",
-        "backgroundImage": "./assets/images/android-icon-background.png",
-        "monochromeImage": "./assets/images/android-icon-monochrome.png"
+        "backgroundColor": "#060709",
+        "foregroundImage": "./assets/images/logo-custom.png"
       },
       "predictiveBackGestureEnabled": false
     },
@@ -35,11 +35,25 @@
           }
         }
       ],
-      "expo-secure-store"
+      "expo-secure-store",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/images/notification-icon.png",
+          "color": "#208AEF"
+        }
+      ]
     ],
     "experiments": {
       "typedRoutes": true,
       "reactCompiler": true
-    }
+    },
+    "extra": {
+      "router": {},
+      "eas": {
+        "projectId": "76ccbf1b-d1bc-45c8-9b78-a1167b2d3148"
+      }
+    },
+    "owner": "jordamn"
   }
 }

@@ -1,5 +1,6 @@
 const paypalService = require('../services/paypalService');
 const { pool } = require('../config/database');
+const { sendMembershipConfirmationToUser } = require('../services/pushNotificationService');
 
 /**
  * Crea una orden de pago en PayPal
@@ -49,6 +50,7 @@ exports.capturePaypalOrder = async (req, res) => {
     const connection = await pool.getConnection();
     try {
         const { orderId, usuario_id, producto_id, membresia_id, cantidad, total, tipo } = req.body;
+        let membershipName = null;
 
         if (!orderId || !total || !tipo) {
             console.log('❌ Capture failed: missing parameters');
@@ -126,6 +128,7 @@ exports.capturePaypalOrder = async (req, res) => {
             }
 
             const membership = membRows[0];
+            membershipName = membership.nombre;
             
             // Calcular fecha de vencimiento
             const expiry = new Date();
@@ -147,6 +150,12 @@ exports.capturePaypalOrder = async (req, res) => {
 
         await connection.commit();
         const saleId = result.insertId;
+
+        if (tipo === 'membresia' && membershipName) {
+            sendMembershipConfirmationToUser(usuario_id, membershipName, saleId).catch((pushError) => {
+                console.error('Error al enviar push de membresía confirmada:', pushError);
+            });
+        }
 
         // 3. Enviar correo con recibo PDF en segundo plano
         if (usuario_id) {
@@ -214,6 +223,7 @@ exports.processCardPayment = async (req, res) => {
     const connection = await pool.getConnection();
     try {
         const { cardId, usuario_id, producto_id, membresia_id, cantidad, total, tipo } = req.body;
+        let membershipName = null;
 
         if (!total || !tipo || !usuario_id) {
             return res.status(400).json({
@@ -278,6 +288,7 @@ exports.processCardPayment = async (req, res) => {
             }
 
             const membership = membRows[0];
+            membershipName = membership.nombre;
             
             // Calcular fecha de vencimiento
             const expiry = new Date();
@@ -299,6 +310,12 @@ exports.processCardPayment = async (req, res) => {
 
         await connection.commit();
         const saleId = result.insertId;
+
+        if (tipo === 'membresia' && membershipName) {
+            sendMembershipConfirmationToUser(usuario_id, membershipName, saleId).catch((pushError) => {
+                console.error('Error al enviar push de membresía confirmada:', pushError);
+            });
+        }
 
         // 3. Enviar correo con recibo PDF en segundo plano
         (async () => {

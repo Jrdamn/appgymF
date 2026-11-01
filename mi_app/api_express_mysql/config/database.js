@@ -48,6 +48,21 @@ const setupDatabase = async () => {
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);
 
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS login_verification_codes (
+                id CHAR(64) PRIMARY KEY,
+                usuario_id INT NOT NULL,
+                code_hash VARCHAR(255) NOT NULL,
+                attempts TINYINT UNSIGNED NOT NULL DEFAULT 0,
+                created_at TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                expires_at DATETIME NOT NULL,
+                used_at DATETIME NULL,
+                INDEX idx_login_verification_user_created (usuario_id, created_at),
+                CONSTRAINT fk_login_verification_user
+                    FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
         // 2. Agregar columnas dinámicamente a 'usuarios' si no existen
         try {
             await pool.execute(
@@ -260,6 +275,18 @@ const setupDatabase = async () => {
                 mensaje VARCHAR(255) NOT NULL,
                 leido TINYINT DEFAULT 0,
                 fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
+        await pool.execute(`
+            CREATE TABLE IF NOT EXISTS push_tokens (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                usuario_id INT NOT NULL,
+                expo_push_token VARCHAR(255) NOT NULL UNIQUE,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_push_tokens_usuario (usuario_id),
                 FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
             ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
         `);

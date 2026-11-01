@@ -50,6 +50,7 @@ const saleRoutes = require('./routes/saleRoutes');
 const checkinRoutes = require('./routes/checkinRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const routineRoutes = require('./routes/routineRoutes');
+const pushNotificationRoutes = require('./routes/pushNotificationRoutes');
 
 // Crear aplicación Express
 const app = express();
@@ -143,6 +144,7 @@ app.use(`${API_PREFIX}/sales`, saleRoutes);
 app.use(`${API_PREFIX}/checkins`, checkinRoutes);
 app.use(`${API_PREFIX}/payments`, paymentRoutes);
 app.use(`${API_PREFIX}/routines`, routineRoutes);
+app.use(`${API_PREFIX}/notifications`, pushNotificationRoutes);
 
 // Ruta para documentación básica
 app.get('/docs', (req, res) => {
@@ -153,11 +155,15 @@ app.get('/docs', (req, res) => {
         endpoints: {
             // Autenticación
             'POST /auth/register': 'Registrar nuevo usuario',
-            'POST /auth/login': 'Iniciar sesión',
+            'POST /auth/login': 'Validar contraseña y enviar código de verificación al correo',
+            'POST /auth/verify-login-code': 'Validar código de segundo factor e iniciar sesión',
             'GET /auth/profile': 'Obtener perfil (requiere token)',
             'PUT /auth/profile': 'Actualizar perfil (requiere token)',
             'POST /auth/refresh': 'Renovar token',
             'POST /auth/logout': 'Cerrar sesión',
+            'POST /notifications/push-token': 'Registrar token de notificaciones del dispositivo',
+            'DELETE /notifications/push-token': 'Desvincular token de notificaciones del dispositivo',
+            'POST /notifications/test': 'Enviar notificación push de prueba a tu propio dispositivo',
             // Usuarios
             'GET /users': 'Obtener todos los usuarios (con paginación)',
             'GET /users/search?q=nombre': 'Buscar usuarios por nombre',

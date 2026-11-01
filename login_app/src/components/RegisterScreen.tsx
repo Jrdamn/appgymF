@@ -28,10 +28,11 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('');
   const [password, setPassword] = useState('');
-  const [rol, setRol] = useState<number>(1);
+  const rol = 1;
 
   const [loading, setLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
   // Focus states for input styling
   const [nombreFocused, setNombreFocused] = useState(false);
@@ -51,10 +52,12 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
     }
 
     setErrorMessage(null);
+    setSuccessMessage(null);
     setLoading(true);
 
     try {
       await register(nombre.trim(), email.trim(), telefono.trim(), password, rol);
+      setSuccessMessage('Cuenta creada. Inicia sesión para verificar tu correo.');
     } catch (error: any) {
       setErrorMessage(error.message || 'Error al registrar el usuario.');
     } finally {
@@ -100,6 +103,12 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
             {errorMessage && (
               <View style={[styles.errorBanner, { backgroundColor: '#FFEDED', borderColor: '#FFA1A1' }]}>
                 <ThemedText style={styles.errorText}>{errorMessage}</ThemedText>
+              </View>
+            )}
+
+            {successMessage && (
+              <View style={styles.successBanner}>
+                <ThemedText style={styles.successText}>{successMessage}</ThemedText>
               </View>
             )}
 
@@ -286,6 +295,19 @@ const styles = StyleSheet.create({
   },
   errorText: {
     color: '#D32F2F',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  successBanner: {
+    padding: Spacing.three,
+    borderRadius: Spacing.two,
+    borderWidth: 1,
+    borderColor: '#A1DFA1',
+    backgroundColor: '#EAF7EA',
+    marginBottom: Spacing.four,
+  },
+  successText: {
+    color: '#2E7D32',
     fontSize: 14,
     textAlign: 'center',
   },

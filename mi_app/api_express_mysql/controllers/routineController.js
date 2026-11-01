@@ -58,6 +58,15 @@ exports.createRoutine = async (req, res) => {
 
         const newRoutine = await Rutina.create({ usuario_id, nombre, descripcion });
 
+        const { sendPushNotificationToUser } = require('../services/pushNotificationService');
+        sendPushNotificationToUser(usuario_id, {
+            title: 'Nueva rutina asignada',
+            body: `Tu entrenador te asignó: ${nombre}`,
+            data: { type: 'routine_assigned', routineId: newRoutine.id }
+        }).catch((pushError) => {
+            console.error('Error al enviar push de rutina asignada:', pushError);
+        });
+
         // Registrar notificación para el cliente e enviar correo
         try {
             const { pool } = require('../config/database');
@@ -112,7 +121,7 @@ exports.deleteRoutine = async (req, res) => {
     try {
         const { id } = req.params;
         const deleted = await Rutina.delete(id);
-        
+
         if (!deleted) {
             return res.status(404).json({
                 success: false,

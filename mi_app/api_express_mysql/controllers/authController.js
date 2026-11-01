@@ -5,8 +5,25 @@
 
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const crypto = require('crypto');
 const User = require('../models/User');
+const { pool } = require('../config/database');
 const { validationResult } = require('express-validator');
+
+const createAuthToken = (user) => jwt.sign(
+    {
+        userId: user.id,
+        email: user.email,
+        role: user.role
+    },
+    process.env.JWT_SECRET || 'default_secret_key',
+    { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+);
+
+const maskEmail = (email) => {
+    const [localPart, domain] = email.split('@');
+    return `${localPart.slice(0, 1)}***@${domain}`;
+};
 
 /**
  * Clase que maneja las operaciones de autenticación
@@ -54,24 +71,11 @@ class AuthController {
                 rol: rol !== undefined ? parseInt(rol) : 1
             });
 
-            // Generar JWT token con rol real del usuario
-            const token = jwt.sign(
-                { 
-                    userId: newUser.id, 
-                    email: newUser.email,
-                    role: newUser.role
-                },
-                process.env.JWT_SECRET || 'default_secret_key',
-                { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
-            );
-
             res.status(201).json({
                 success: true,
-                message: 'Usuario registrado correctamente',
+                message: 'Cuenta creada. Inicia sesión para verificar tu correo.',
                 data: {
-                    user: newUser,
-                    token,
-                    expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+                    user: newUser
                 }
             });
         } catch (error) {
@@ -122,27 +126,58 @@ class AuthController {
                 });
             }
 
-            // Generar JWT token con rol
-            const token = jwt.sign(
-                { 
-                    userId: user.id, 
-                    email: user.email,
-                    role: user.role
-                },
-                process.env.JWT_SECRET || 'default_secret_key',
-                { expiresIn: process.env.JWT_EXPIRES_IN || '24h' }
+            const [recentChallenges] = await pool.execute(
+                `SELECT COUNT(*) AS count
+                 FROM login_verification_codes
+                 WHERE usuario_id = ? AND created_at >= DATE_SUB(NOW(), INTERVAL 1 MINUTE)`,
+                [user.id]
+            );
+            if (recentChallenges[0].count > 0) {
+                return res.status(429).json({
+                    success: false,
+                    message: 'Espera un minuto antes de solicitar otro código.'
+                });
+            }
+
+            const code = crypto.randomInt(0, 1000000).toString().padStart(6, '0');
+            const challengeId = crypto.randomBytes(32).toString('hex');
+            const challengeHash = crypto.createHash('sha256').update(challengeId).digest('hex');
+            const codeHash = await bcrypt.hash(code, 10);
+
+            await pool.execute(
+                `UPDATE login_verification_codes
+                 SET used_at = NOW()
+                 WHERE usuario_id = ? AND used_at IS NULL`,
+                [user.id]
+            );
+            await pool.execute(
+                `INSERT INTO login_verification_codes (id, usuario_id, code_hash, expires_at)
+                 VALUES (?, ?, ?, DATE_ADD(NOW(), INTERVAL 10 MINUTE))`,
+                [challengeHash, user.id, codeHash]
             );
 
-            // Remover password del objeto user antes de enviarlo
-            delete user.password;
+            const { sendMail } = require('../services/emailService');
+            const mailSent = await sendMail(
+                user.email,
+                'Código de inicio de sesión - Shark Gym',
+                `Hola ${user.nombre},\n\nTu código de verificación para iniciar sesión es: ${code}\n\nVence en 10 minutos. Si no solicitaste este código, puedes ignorar este correo.`
+            );
+            if (!mailSent) {
+                await pool.execute('DELETE FROM login_verification_codes WHERE id = ?', [challengeHash]);
+                return res.status(503).json({
+                    success: false,
+                    message: 'No se pudo enviar el código. Verifica la configuración del correo e inténtalo de nuevo.'
+                });
+            }
 
             res.status(200).json({
                 success: true,
-                message: 'Login exitoso',
+                message: 'Código de verificación enviado.',
                 data: {
-                    user,
-                    token,
-                    expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+                    requiresTwoFactor: true,
+                    challengeId,
+                    maskedEmail: maskEmail(user.email),
+                    expiresInSeconds: 600
                 }
             });
         } catch (error) {
@@ -151,6 +186,88 @@ class AuthController {
                 success: false,
                 message: 'Error interno del servidor',
                 error: error.message
+            });
+        }
+    }
+
+    static async verifyLoginCode(req, res) {
+        try {
+            const errors = validationResult(req);
+            if (!errors.isEmpty()) {
+                return res.status(400).json({
+                    success: false,
+                    message: 'Código de verificación inválido.'
+                });
+            }
+
+            const { challengeId, code } = req.body;
+            const challengeHash = crypto.createHash('sha256').update(challengeId).digest('hex');
+            const [rows] = await pool.execute(
+                `SELECT usuario_id, code_hash
+                 FROM login_verification_codes
+                 WHERE id = ? AND used_at IS NULL AND expires_at > NOW() AND attempts < 5`,
+                [challengeHash]
+            );
+
+            if (rows.length === 0) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'El código es inválido, expiró o ya fue utilizado.'
+                });
+            }
+
+            const challenge = rows[0];
+            const isCodeValid = await bcrypt.compare(code, challenge.code_hash);
+            if (!isCodeValid) {
+                const [attemptResult] = await pool.execute(
+                    `UPDATE login_verification_codes
+                     SET attempts = attempts + 1
+                     WHERE id = ? AND used_at IS NULL AND expires_at > NOW() AND attempts < 5`,
+                    [challengeHash]
+                );
+                return res.status(attemptResult.affectedRows > 0 ? 401 : 429).json({
+                    success: false,
+                    message: attemptResult.affectedRows > 0
+                        ? 'El código ingresado es incorrecto.'
+                        : 'Se agotaron los intentos para este código.'
+                });
+            }
+
+            const [consumeResult] = await pool.execute(
+                `UPDATE login_verification_codes
+                 SET used_at = NOW()
+                 WHERE id = ? AND used_at IS NULL AND expires_at > NOW() AND attempts < 5`,
+                [challengeHash]
+            );
+            if (consumeResult.affectedRows !== 1) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'El código es inválido, expiró o ya fue utilizado.'
+                });
+            }
+
+            const user = await User.findById(challenge.usuario_id);
+            if (!user) {
+                return res.status(401).json({
+                    success: false,
+                    message: 'No se pudo completar el inicio de sesión.'
+                });
+            }
+
+            return res.status(200).json({
+                success: true,
+                message: 'Inicio de sesión exitoso.',
+                data: {
+                    user,
+                    token: createAuthToken(user),
+                    expiresIn: process.env.JWT_EXPIRES_IN || '24h'
+                }
+            });
+        } catch (error) {
+            console.error('Error en verifyLoginCode:', error);
+            return res.status(500).json({
+                success: false,
+                message: 'Error interno del servidor'
             });
         }
     }

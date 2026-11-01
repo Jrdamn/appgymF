@@ -614,8 +614,7 @@ export default function UserManagementScreen() {
 
                 <Pressable
                   style={[
-                    styles.actionButton,
-                    styles.saveButton,
+                    styles.assignRoutineButton,
                     { marginTop: Spacing.one, opacity: routineActionLoading ? 0.7 : 1, height: 44 }
                   ]}
                   onPress={handleCreateRoutine}
@@ -624,7 +623,7 @@ export default function UserManagementScreen() {
                   {routineActionLoading ? (
                     <ActivityIndicator size="small" color="#ffffff" />
                   ) : (
-                    <ThemedText style={styles.saveButtonText}>Asignar Rutina</ThemedText>
+                    <ThemedText style={styles.assignRoutineButtonText}>Asignar Rutina</ThemedText>
                   )}
                 </Pressable>
               </View>
@@ -953,6 +952,18 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     minWidth: 70,
     alignItems: 'center',
+  },
+  assignRoutineButton: {
+    borderRadius: Spacing.two,
+    backgroundColor: '#4caf50',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: Spacing.three,
+  },
+  assignRoutineButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
   editBtn: {
     borderColor: '#3c87f7',

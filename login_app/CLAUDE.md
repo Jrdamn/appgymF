@@ -49,7 +49,7 @@ npx expo start --clear
 1. **Corrección de Almacenamiento en Web:**
    * Se abstrajeron las llamadas de `expo-secure-store` (que no es compatible con navegadores) mediante funciones adaptables que hacen fallback a `window.localStorage` en la Web y usan `SecureStore` nativo en móviles.
  2. **Diseño de Fondo Personalizado:**
-    * Se importó una imagen de tiburón (`background-shark.jpg`) y se configuró como fondo (ImageBackground con `resizeMode="cover"`) en `LoginScreen`, `RegisterScreen`, `HomeScreen` (index) y `UserManagementScreen` (explore).
+    * Se configuró la imagen gráfica de Shark Gym (`background-shark.jpg`) como fondo con `ImageBackground` y `resizeMode="cover"` en las pantallas de login, registro, inicio y las secciones de la app.
     * Se configuró el color `#121212` (gris oscuro/negro) como fondo plano de respaldo.
  3. **Mejoras de Visibilidad:**
     * Se cambiaron los colores de texto de los títulos y subtítulos del encabezado en `HomeScreen` y `UserManagementScreen` a **color blanco / gris claro** para garantizar legibilidad óptima sobre el fondo oscuro.

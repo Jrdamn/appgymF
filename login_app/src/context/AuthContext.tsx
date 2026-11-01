@@ -2,6 +2,7 @@ import * as SecureStore from 'expo-secure-store';
 import React, { createContext, useContext, useEffect, useState } from 'react';
 import { Platform } from 'react-native';
 import api, { setAuthToken } from '../services/api';
+import { registerPushNotifications, unregisterPushNotifications } from '../services/pushNotifications';
 
 // Helper functions to handle web vs mobile storage
 const getStorageItem = async (key: string): Promise<string | null> => {
@@ -67,7 +68,8 @@ interface AuthContextType {
     token: string | null;
     isAuthenticated: boolean;
     isLoading: boolean;
-    login: (email: string, password: string) => Promise<void>;
+    login: (email: string, password: string) => Promise<{ requiresTwoFactor: true; challengeId: string; maskedEmail: string }>;
+    verifyLoginCode: (challengeId: string, code: string) => Promise<void>;
     register: (nombre: string, email: string, telefono: string, password: string, rol?: number) => Promise<void>;
     logout: () => Promise<void>;
     refreshProfile: () => Promise<void>;
@@ -89,6 +91,27 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [user, setUser] = useState<User | null>(null);
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
+    const pushRegistrationRef = React.useRef<Promise<void> | null>(null);
+    const userId = user?.id;
+
+    useEffect(() => {
+        if (userId === undefined || !token) {
+            return;
+        }
+
+        const registration = registerPushNotifications()
+            .then(() => undefined)
+            .catch((error) => {
+                console.error('No se pudo registrar el token de notificaciones:', error);
+            })
+            .finally(() => {
+                if (pushRegistrationRef.current === registration) {
+                    pushRegistrationRef.current = null;
+                }
+            });
+
+        pushRegistrationRef.current = registration;
+    }, [userId, token]);
 
     // Load storage token on mount
     useEffect(() => {
@@ -134,19 +157,61 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             const response = await api.post('/auth/login', { email, password });
             if (response.data && response.data.success) {
-                const { token: userToken, user: userData } = response.data.data;
-                await setStorageItem('userToken', userToken);
-                setAuthToken(userToken);
-                setToken(userToken);
-                setUser(userData);
+                const loginData = response.data.data;
+                if (
+                    loginData?.requiresTwoFactor === true &&
+                    typeof loginData.challengeId === 'string' &&
+                    typeof loginData.maskedEmail === 'string'
+                ) {
+                    return {
+                        requiresTwoFactor: true as const,
+                        challengeId: loginData.challengeId,
+                        maskedEmail: loginData.maskedEmail,
+                    };
+                }
+
+                throw new Error('El servidor no inició el proceso de verificación de dos pasos.');
             } else {
                 throw new Error(response.data?.message || 'Error al iniciar sesión');
             }
         } catch (error: any) {
             console.warn('Login error:', error);
 
-            // Extract sub-validation errors if present from express-validator
             let errorMsg = 'Error al iniciar sesión';
+            if (error.response?.data) {
+                const data = error.response.data;
+                if (data.message) {
+                    errorMsg = data.message;
+                }
+                if (data.errors && Array.isArray(data.errors) && data.errors.length > 0) {
+                    errorMsg += `: ${data.errors.map((e: any) => e.msg).join(', ')}`;
+                }
+            } else {
+                errorMsg = error.message || 'Error de conexión';
+            }
+            throw new Error(errorMsg);
+        }
+    };
+
+    const verifyLoginCode = async (challengeId: string, code: string) => {
+        try {
+            const response = await api.post('/auth/verify-login-code', { challengeId, code });
+            if (response.data && response.data.success) {
+                const { token: userToken, user: userData } = response.data.data;
+                if (typeof userToken !== 'string' || !userData) {
+                    throw new Error('El servidor devolvió una respuesta de autenticación inválida.');
+                }
+                await setStorageItem('userToken', userToken);
+                setAuthToken(userToken);
+                setToken(userToken);
+                setUser(userData);
+            } else {
+                throw new Error(response.data?.message || 'No se pudo verificar el código.');
+            }
+        } catch (error: any) {
+            console.warn('Login verification error:', error);
+
+            let errorMsg = 'No se pudo verificar el código.';
             if (error.response?.data) {
                 const data = error.response.data;
                 if (data.message) {
@@ -166,11 +231,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
             const response = await api.post('/auth/register', { nombre, email, telefono, password, rol });
             if (response.data && response.data.success) {
-                const { token: userToken, user: userData } = response.data.data;
-                await setStorageItem('userToken', userToken);
-                setAuthToken(userToken);
-                setToken(userToken);
-                setUser(userData);
+                return;
             } else {
                 throw new Error(response.data?.message || 'Error al registrarse');
             }
@@ -197,6 +258,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const logout = async () => {
         try {
             if (token) {
+                if (pushRegistrationRef.current) {
+                    await pushRegistrationRef.current;
+                }
+                try {
+                    await unregisterPushNotifications();
+                } catch (error) {
+                    console.error('No se pudo desvincular el token de notificaciones:', error);
+                }
+
                 // Send a request to backend to logout (best-effort)
                 await api.post('/auth/logout').catch((e) => {
                     console.log('Backend logout warning:', e.message);
@@ -269,6 +339,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                 isAuthenticated: !!user,
                 isLoading,
                 login,
+                verifyLoginCode,
                 register,
                 logout,
                 refreshProfile,

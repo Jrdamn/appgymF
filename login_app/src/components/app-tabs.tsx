@@ -1,21 +1,95 @@
-import { NativeTabs } from 'expo-router/unstable-native-tabs';
-import React, { useState, useCallback } from 'react';
+import { Tabs, router } from 'expo-router';
+import type { BottomTabBarProps } from '@react-navigation/bottom-tabs';
+import React, { useState } from 'react';
 import {
   StyleSheet,
   View,
   Pressable,
   ScrollView,
-  Platform,
   useColorScheme,
   Image,
+  ImageSourcePropType,
 } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { router } from 'expo-router';
-
 import { Colors, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { ThemedText } from '@/components/themed-text';
 import { ThemedView } from '@/components/themed-view';
+
+type ModuleTab = {
+  route: string;
+  label: string;
+  icon: ImageSourcePropType;
+};
+
+const memberTabs: ModuleTab[] = [
+  { route: 'index', label: 'Inicio', icon: require('@/assets/images/tabIcons/home.png') },
+  { route: 'checkin', label: 'Acceso', icon: require('@/assets/images/tabIcons/checkin.png') },
+  { route: 'store', label: 'Tienda', icon: require('@/assets/images/tabIcons/store.png') },
+  { route: 'plans', label: 'Planes', icon: require('@/assets/images/tabIcons/plans.png') },
+  { route: 'routines', label: 'Rutinas', icon: require('@/assets/images/tabIcons/routines.png') },
+];
+
+const adminTabs: ModuleTab[] = [
+  { route: 'index', label: 'Inicio', icon: require('@/assets/images/tabIcons/home.png') },
+  { route: 'checkin', label: 'Acceso', icon: require('@/assets/images/tabIcons/checkin.png') },
+  { route: 'store', label: 'Tienda', icon: require('@/assets/images/tabIcons/store.png') },
+  { route: 'routines', label: 'Rutinas', icon: require('@/assets/images/tabIcons/routines.png') },
+  { route: 'explore', label: 'Usuarios', icon: require('@/assets/images/tabIcons/users.png') },
+];
+
+function ModuleTabBar({ state, navigation }: BottomTabBarProps) {
+  const { user } = useAuth();
+  const insets = useSafeAreaInsets();
+  const tabs = user?.role === 'admin' ? adminTabs : memberTabs;
+
+  return (
+    <View style={[styles.moduleTabBar, { paddingBottom: Math.max(insets.bottom, 8) }]}>
+      {tabs.map((tab) => {
+        const route = state.routes.find((item) => item.name === tab.route);
+        if (!route) return null;
+
+        const isSelected = state.routes[state.index]?.name === tab.route;
+        const color = isSelected ? '#79bdff' : '#aeb8c6';
+
+        return (
+          <Pressable
+            key={tab.route}
+            accessibilityRole="tab"
+            accessibilityState={{ selected: isSelected }}
+            accessibilityLabel={tab.label}
+            onPress={() => {
+              const event = navigation.emit({
+                type: 'tabPress',
+                target: route.key,
+                canPreventDefault: true,
+              });
+
+              if (!isSelected && !event.defaultPrevented) {
+                navigation.navigate(route.name, route.params);
+              }
+            }}
+            style={({ pressed }) => [
+              styles.moduleTabButton,
+              pressed && styles.moduleTabPressed,
+            ]}
+          >
+            <View style={[styles.moduleTabIconWrap, isSelected && styles.moduleTabIconWrapSelected]}>
+              <Image
+                source={tab.icon}
+                style={[styles.moduleTabIcon, { tintColor: color }]}
+                resizeMode="contain"
+              />
+            </View>
+            <ThemedText style={[styles.moduleTabLabel, { color }]}>
+              {tab.label}
+            </ThemedText>
+          </Pressable>
+        );
+      })}
+    </View>
+  );
+}
 
 export default function AppTabs() {
   const scheme = useColorScheme();
@@ -37,65 +111,17 @@ export default function AppTabs() {
 
   return (
     <View style={{ flex: 1, backgroundColor: colors.background }}>
-      <NativeTabs
-        backgroundColor={colors.background}
-        indicatorColor={colors.backgroundElement}
-        labelStyle={{ selected: { color: colors.text } }}>
-        
-        <NativeTabs.Trigger name="index">
-          <NativeTabs.Trigger.Label>Inicio</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon
-            src={require('@/assets/images/tabIcons/home.png')}
-            renderingMode="template"
-          />
-        </NativeTabs.Trigger>
-
-        <NativeTabs.Trigger name="checkin">
-          <NativeTabs.Trigger.Label>Acceso</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon
-            src={require('@/assets/images/tabIcons/checkin.png')}
-            renderingMode="template"
-          />
-        </NativeTabs.Trigger>
-
-        <NativeTabs.Trigger name="store">
-          <NativeTabs.Trigger.Label>Tienda</NativeTabs.Trigger.Label>
-          <NativeTabs.Trigger.Icon
-            src={require('@/assets/images/tabIcons/store.png')}
-            renderingMode="template"
-          />
-        </NativeTabs.Trigger>
-
-        {!isAdmin && (
-          <NativeTabs.Trigger name="plans">
-            <NativeTabs.Trigger.Label>Planes</NativeTabs.Trigger.Label>
-            <NativeTabs.Trigger.Icon
-              src={require('@/assets/images/tabIcons/plans.png')}
-              renderingMode="template"
-            />
-          </NativeTabs.Trigger>
-        )}
-
-        {!isAdmin && (
-          <NativeTabs.Trigger name="routines">
-            <NativeTabs.Trigger.Label>Rutinas</NativeTabs.Trigger.Label>
-            <NativeTabs.Trigger.Icon
-              src={require('@/assets/images/tabIcons/routines.png')}
-              renderingMode="template"
-            />
-          </NativeTabs.Trigger>
-        )}
-
-        {isAdmin && (
-          <NativeTabs.Trigger name="explore">
-            <NativeTabs.Trigger.Label>Usuarios</NativeTabs.Trigger.Label>
-            <NativeTabs.Trigger.Icon
-              src={require('@/assets/images/tabIcons/users.png')}
-              renderingMode="template"
-            />
-          </NativeTabs.Trigger>
-        )}
-      </NativeTabs>
+      <Tabs
+        screenOptions={{ headerShown: false }}
+        tabBar={(props) => <ModuleTabBar {...props} />}
+      >
+        <Tabs.Screen name="index" />
+        <Tabs.Screen name="checkin" />
+        <Tabs.Screen name="store" />
+        <Tabs.Screen name="plans" />
+        <Tabs.Screen name="routines" />
+        <Tabs.Screen name="explore" />
+      </Tabs>
 
       {/* Floating Hamburger Button */}
       {!menuVisible && (
@@ -239,20 +265,20 @@ export default function AppTabs() {
                 )}
 
                 {/* Link: Rutinas */}
-                {!isAdmin && (
-                  <Pressable
-                    style={({ pressed }) => [styles.drawerLink, pressed && styles.drawerLinkPressed]}
-                    onPress={() => {
-                      setMenuVisible(false);
-                      router.push('/routines');
-                    }}
-                  >
-                    <View style={[styles.drawerIconBadge, { backgroundColor: 'rgba(234, 179, 8, 0.15)' }]}>
-                      <ThemedText style={styles.drawerLinkIcon}>💪</ThemedText>
-                    </View>
-                    <ThemedText style={styles.drawerLinkText}>Rutinas de Ejercicio</ThemedText>
-                  </Pressable>
-                )}
+                <Pressable
+                  style={({ pressed }) => [styles.drawerLink, pressed && styles.drawerLinkPressed]}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    router.push('/routines');
+                  }}
+                >
+                  <View style={[styles.drawerIconBadge, { backgroundColor: 'rgba(234, 179, 8, 0.15)' }]}>
+                    <ThemedText style={styles.drawerLinkIcon}>💪</ThemedText>
+                  </View>
+                  <ThemedText style={styles.drawerLinkText}>
+                    {isAdmin ? 'Asignar Rutinas' : 'Rutinas de Ejercicio'}
+                  </ThemedText>
+                </Pressable>
 
                 {/* Link: Gestión de Usuarios */}
                 {isAdmin && (
@@ -295,18 +321,72 @@ export default function AppTabs() {
 }
 
 const styles = StyleSheet.create({
+  moduleTabBar: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-around',
+    minHeight: 82,
+    paddingTop: 8,
+    paddingHorizontal: 8,
+    backgroundColor: '#080a0e',
+    borderTopWidth: 1,
+    borderTopColor: 'rgba(255,255,255,0.16)',
+    elevation: 16,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  moduleTabButton: {
+    flex: 1,
+    minWidth: 56,
+    minHeight: 66,
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 3,
+    borderRadius: 16,
+  },
+  moduleTabPressed: {
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    transform: [{ scale: 0.96 }],
+  },
+  moduleTabIconWrap: {
+    width: 44,
+    height: 34,
+    borderRadius: 17,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  moduleTabIconWrapSelected: {
+    backgroundColor: 'rgba(32, 138, 239, 0.28)',
+  },
+  moduleTabIcon: {
+    width: 27,
+    height: 27,
+  },
+  moduleTabLabel: {
+    fontSize: 12,
+    lineHeight: 16,
+    fontWeight: '700',
+    textAlign: 'center',
+  },
   hamburgerButton: {
     position: 'absolute',
-    right: 20,
-    width: 44,
-    height: 44,
-    borderRadius: 22,
-    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+    right: 18,
+    width: 52,
+    height: 52,
+    borderRadius: 26,
+    backgroundColor: '#1677d2',
     justifyContent: 'center',
     alignItems: 'center',
     zIndex: 999,
-    borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.12)',
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.75)',
+    elevation: 8,
+    shadowColor: '#000000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.35,
+    shadowRadius: 5,
   },
   hamburgerIconText: {
     fontSize: 24,
@@ -387,38 +467,42 @@ const styles = StyleSheet.create({
     marginVertical: Spacing.two,
   },
   drawerLinksContainer: {
-    gap: 12,
-    paddingVertical: Spacing.one,
+    gap: Spacing.two,
+    paddingVertical: Spacing.two,
   },
   drawerLink: {
     flexDirection: 'row',
     alignItems: 'center',
+    minHeight: 64,
     paddingVertical: 12,
-    paddingHorizontal: 12,
-    borderRadius: 12,
-    backgroundColor: 'rgba(255, 255, 255, 0.03)',
+    paddingHorizontal: 14,
+    borderRadius: 16,
+    backgroundColor: 'rgba(32, 138, 239, 0.10)',
     borderWidth: 1,
-    borderColor: 'rgba(255, 255, 255, 0.04)',
-    gap: 12,
+    borderColor: 'rgba(32, 138, 239, 0.32)',
+    gap: 14,
   },
   drawerLinkPressed: {
-    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-    borderColor: 'rgba(255, 255, 255, 0.1)',
+    backgroundColor: 'rgba(32, 138, 239, 0.25)',
+    borderColor: 'rgba(91, 174, 255, 0.75)',
+    transform: [{ scale: 0.98 }],
   },
   drawerIconBadge: {
-    width: 36,
-    height: 36,
-    borderRadius: 18,
+    width: 44,
+    height: 44,
+    borderRadius: 14,
     justifyContent: 'center',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.18)',
   },
   drawerLinkIcon: {
-    fontSize: 18,
+    fontSize: 22,
   },
   drawerLinkText: {
     flex: 1,
-    fontSize: 15,
-    fontWeight: '700',
+    fontSize: 16,
+    fontWeight: '800',
     color: '#ffffff',
   },
 });

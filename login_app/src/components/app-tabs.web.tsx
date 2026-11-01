@@ -40,11 +40,9 @@ export default function AppTabs() {
               <TabButton>Planes</TabButton>
             </TabTrigger>
           )}
-          {!isAdmin && (
-            <TabTrigger name="routines" href="/routines" asChild>
-              <TabButton>Rutinas</TabButton>
-            </TabTrigger>
-          )}
+          <TabTrigger name="routines" href="/routines" asChild>
+            <TabButton>{isAdmin ? 'Asignar Rutinas' : 'Rutinas'}</TabButton>
+          </TabTrigger>
           {isAdmin && (
             <TabTrigger name="explore" href="/explore" asChild>
               <TabButton>Usuarios</TabButton>

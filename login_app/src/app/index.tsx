@@ -1,23 +1,24 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import * as ImagePicker from 'expo-image-picker';
+import { useFocusEffect, useLocalSearchParams } from 'expo-router';
+import * as WebBrowser from 'expo-web-browser';
+import React, { useCallback, useEffect, useState } from 'react';
 import {
-  Platform,
-  StyleSheet,
-  Pressable,
-  View,
-  ImageBackground,
-  TextInput,
   ActivityIndicator,
-  ScrollView,
-  Switch,
-  KeyboardAvoidingView,
-  RefreshControl,
-  Modal,
+  Alert,
   Image,
+  ImageBackground,
+  KeyboardAvoidingView,
+  Modal,
+  Platform,
+  Pressable,
+  RefreshControl,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  TextInput,
+  View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
-import { router, useLocalSearchParams, useFocusEffect } from 'expo-router';
-import * as WebBrowser from 'expo-web-browser';
-import * as ImagePicker from 'expo-image-picker';
 
 import { AnimatedIcon } from '@/components/animated-icon';
 import { ThemedText } from '@/components/themed-text';
@@ -110,11 +111,11 @@ export default function HomeScreen() {
   const [peso, setPeso] = useState('');
   const [estatura, setEstatura] = useState('');
   const [fotoPerfil, setFotoPerfil] = useState('');
-  
+
   const [pesoFocused, setPesoFocused] = useState(false);
   const [estaturaFocused, setEstaturaFocused] = useState(false);
   const [fotoPerfilFocused, setFotoPerfilFocused] = useState(false);
-  
+
   const [changePassword, setChangePassword] = useState(false);
   const [currentPassword, setCurrentPassword] = useState('');
   const [newPassword, setNewPassword] = useState('');
@@ -132,6 +133,7 @@ export default function HomeScreen() {
   const [paypalEmail, setPaypalEmail] = useState('');
 
   const [loading, setLoading] = useState(false);
+  const [testingPushNotification, setTestingPushNotification] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
 
@@ -382,6 +384,19 @@ export default function HomeScreen() {
     }
   };
 
+  const handleTestPushNotification = async () => {
+    setTestingPushNotification(true);
+    try {
+      const response = await api.post('/notifications/test');
+      Alert.alert('Solicitud enviada', response.data?.message || 'Revisa las notificaciones de Android.');
+    } catch (error: any) {
+      const message = error.response?.data?.message || 'No se pudo enviar la notificación de prueba.';
+      Alert.alert('No se pudo probar', message);
+    } finally {
+      setTestingPushNotification(false);
+    }
+  };
+
   useFocusEffect(
     useCallback(() => {
       fetchStats();
@@ -456,10 +471,10 @@ export default function HomeScreen() {
         peso ? parseFloat(peso) : null,
         estatura ? parseInt(estatura, 10) : null
       );
-      
+
       setSuccessMessage('¡Perfil actualizado con éxito!');
       setIsEditing(false);
-      
+
       // Auto clear success message after 4 seconds
       setTimeout(() => {
         setSuccessMessage(null);
@@ -498,7 +513,7 @@ export default function HomeScreen() {
     }
   };
 
-  const formatRegisterDate = (dateString?: string) => {
+  const formatRegisterDate = (dateString?: string | null) => {
     if (!dateString) return 'No disponible';
     try {
       const date = new Date(dateString);
@@ -628,7 +643,7 @@ export default function HomeScreen() {
                           {/* Botón de Generar Reporte PDF */}
                           <Pressable
                             style={({ pressed }) => [
-                              { 
+                              {
                                 opacity: pressed || loading ? 0.8 : 1,
                                 backgroundColor: '#208AEF',
                                 flexDirection: 'row',
@@ -659,11 +674,11 @@ export default function HomeScreen() {
                           {/* Metrics Rows */}
                           <View style={styles.metricsContainer}>
                             {/* Ventas Totales (Histórico) */}
-                            <Pressable 
+                            <Pressable
                               style={({ pressed }) => [
-                                styles.metricCardGreen, 
-                                { 
-                                  opacity: pressed ? 0.8 : 1, 
+                                styles.metricCardGreen,
+                                {
+                                  opacity: pressed ? 0.8 : 1,
                                 }
                               ]}
                               onPress={() => {
@@ -770,7 +785,7 @@ export default function HomeScreen() {
                               {unreadNotifications[0].mensaje}
                             </ThemedText>
                           </View>
-                          <Pressable 
+                          <Pressable
                             onPress={handleMarkNotificationsAsRead}
                             style={({ pressed }) => [
                               {
@@ -926,13 +941,13 @@ export default function HomeScreen() {
                         {paymentMethods.map((method) => {
                           const isCard = method.tipo === 'tarjeta';
                           return (
-                            <View 
-                              key={method.id} 
+                            <View
+                              key={method.id}
                               style={[
-                                styles.paymentCardItem, 
-                                { 
-                                  backgroundColor: isCard 
-                                    ? (method.marca === 'Visa' ? '#1a1f3c' : (method.marca === 'Mastercard' ? '#3c2415' : '#1d352d')) 
+                                styles.paymentCardItem,
+                                {
+                                  backgroundColor: isCard
+                                    ? (method.marca === 'Visa' ? '#1a1f3c' : (method.marca === 'Mastercard' ? '#3c2415' : '#1d352d'))
                                     : '#0f2447',
                                   borderColor: method.es_predeterminado ? '#3c87f7' : 'rgba(255,255,255,0.06)'
                                 }
@@ -1229,7 +1244,7 @@ export default function HomeScreen() {
                         </Pressable>
                       )}
                     </View>
-                    
+
                     {!isEditing ? (
                       /* Profile View Mode */
                       <View style={styles.viewContainer}>
@@ -1256,12 +1271,12 @@ export default function HomeScreen() {
                           <ThemedText type="small" themeColor="textSecondary">Nombre: </ThemedText>
                           <ThemedText type="small" style={styles.infoValue} numberOfLines={1}>{user?.nombre}</ThemedText>
                         </View>
-                        
+
                         <View style={styles.infoRow}>
                           <ThemedText type="small" themeColor="textSecondary">Email: </ThemedText>
                           <ThemedText type="small" style={styles.infoValue} numberOfLines={1}>{user?.email}</ThemedText>
                         </View>
-                        
+
                         <View style={styles.infoRow}>
                           <ThemedText type="small" themeColor="textSecondary">Teléfono: </ThemedText>
                           <ThemedText type="small" style={styles.infoValue} numberOfLines={1}>{user?.telefono}</ThemedText>
@@ -1574,8 +1589,8 @@ export default function HomeScreen() {
                                 secureTextEntry
                                 placeholder="Confirma tu nueva contraseña"
                                 placeholderTextColor={theme.textSecondary}
-                                onFocus={() => confirmPasswordFocused(true)}
-                                onBlur={() => confirmPasswordFocused(false)}
+                                onFocus={() => setConfirmPasswordFocused(true)}
+                                onBlur={() => setConfirmPasswordFocused(false)}
                               />
                             </View>
                           </View>
@@ -1619,6 +1634,25 @@ export default function HomeScreen() {
                     )}
                   </ThemedView>
 
+                  {!isEditing && Platform.OS === 'android' && (
+                    <Pressable
+                      style={({ pressed }) => [
+                        styles.pushTestButton,
+                        { opacity: pressed || testingPushNotification ? 0.7 : 1 }
+                      ]}
+                      onPress={handleTestPushNotification}
+                      disabled={testingPushNotification}
+                    >
+                      {testingPushNotification ? (
+                        <ActivityIndicator size="small" color="#ffffff" />
+                      ) : (
+                        <ThemedText type="smallBold" style={styles.pushTestButtonText}>
+                          Enviar notificación de prueba
+                        </ThemedText>
+                      )}
+                    </Pressable>
+                  )}
+
                   {!isEditing && (
                     <Pressable
                       style={({ pressed }) => [
@@ -1656,8 +1690,8 @@ export default function HomeScreen() {
               <ThemedText type="smallBold" style={styles.modalTitle}>
                 📈 Ventas del Día
               </ThemedText>
-              <Pressable 
-                onPress={() => setSalesModalVisible(false)} 
+              <Pressable
+                onPress={() => setSalesModalVisible(false)}
                 style={({ pressed }) => [styles.modalCloseButton, { opacity: pressed ? 0.7 : 1 }]}
               >
                 <ThemedText style={{ color: '#fff', fontSize: 18, fontWeight: '700' }}>✕</ThemedText>
@@ -1690,7 +1724,7 @@ export default function HomeScreen() {
                 </ThemedText>
               </View>
             ) : (
-              <ScrollView 
+              <ScrollView
                 style={styles.modalScroll}
                 contentContainerStyle={styles.modalScrollContent}
                 showsVerticalScrollIndicator={false}
@@ -1699,8 +1733,8 @@ export default function HomeScreen() {
                   const isProduct = sale.tipo === 'producto';
                   const title = isProduct ? sale.producto_nombre : sale.membresia_nombre;
                   const icon = isProduct ? '📦' : '💳';
-                  const detail = isProduct 
-                    ? `Cant: ${sale.cantidad} • Prod: ${sale.producto_nombre}` 
+                  const detail = isProduct
+                    ? `Cant: ${sale.cantidad} • Prod: ${sale.producto_nombre}`
                     : `Cliente: ${sale.usuario_nombre || 'Socio'}`;
 
                   return (
@@ -1708,7 +1742,7 @@ export default function HomeScreen() {
                       <View style={styles.saleItemIconContainer}>
                         <ThemedText style={{ fontSize: 18 }}>{icon}</ThemedText>
                       </View>
-                      
+
                       <View style={{ flex: 1, paddingRight: Spacing.two }}>
                         <ThemedText type="smallBold" style={styles.saleItemTitle}>
                           {title || 'Venta General'}
@@ -2152,6 +2186,20 @@ const styles = StyleSheet.create({
   saveButtonText: {
     color: '#ffffff',
     fontSize: 16,
+  },
+  pushTestButton: {
+    minHeight: 48,
+    marginTop: Spacing.two,
+    marginBottom: Spacing.two,
+    borderRadius: Spacing.two,
+    backgroundColor: '#208AEF',
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: Spacing.three,
+  },
+  pushTestButtonText: {
+    color: '#ffffff',
+    fontSize: 15,
   },
   logoutButton: {
     backgroundColor: '#ff4d4f',

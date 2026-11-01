@@ -1,7 +1,13 @@
-import axios from 'axios';
+import { create } from 'axios';
+import { Platform } from 'react-native';
 
-const api = axios.create({
-  baseURL: 'http://192.168.100.2:3000/api/v1',
+const apiBaseUrl =
+  Platform.OS === 'web'
+    ? 'http://localhost:3000/api/v1'
+    : 'http://10.0.2.2:3000/api/v1';
+
+const api = create({
+  baseURL: apiBaseUrl,
   timeout: 10000,
   headers: {
     'Content-Type': 'application/json',

@@ -10,6 +10,7 @@ const { authenticateToken } = require('../middleware/auth');
 const { 
     validateRegister, 
     validateLogin, 
+    validateLoginCode,
     validateProfileUpdate 
 } = require('../middleware/validation');
 
@@ -34,6 +35,13 @@ router.post('/register', validateRegister, AuthController.register);
  * @returns {Object} Datos del usuario y token JWT
  */
 router.post('/login', validateLogin, AuthController.login);
+
+/**
+ * @route POST /auth/verify-login-code
+ * @description Verifica el código de segundo factor y completa el login
+ * @access Public (requiere challengeId y código de 6 dígitos)
+ */
+router.post('/verify-login-code', validateLoginCode, AuthController.verifyLoginCode);
 
 /**
  * @route GET /auth/profile

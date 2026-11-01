@@ -96,6 +96,18 @@ const validateLogin = [
         .withMessage('La contraseña es requerida')
 ];
 
+const validateLoginCode = [
+    body('challengeId')
+        .isLength({ min: 64, max: 64 })
+        .withMessage('El identificador de verificación no es válido')
+        .isHexadecimal()
+        .withMessage('El identificador de verificación no es válido'),
+
+    body('code')
+        .matches(/^\d{6}$/)
+        .withMessage('El código debe tener 6 dígitos')
+];
+
 /**
  * Validaciones para actualización de perfil
  */
@@ -325,6 +337,7 @@ module.exports = {
     validateUser,
     validateRegister,
     validateLogin,
+    validateLoginCode,
     validateProfileUpdate,
     validateUserId,
     validatePagination,

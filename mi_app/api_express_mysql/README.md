@@ -67,7 +67,16 @@ Una API REST completa para gestión de usuarios desarrollada con Node.js, Expres
 
    # Configuración del servidor
    API_PREFIX=/api/v1
+
+   # Configuración SMTP (necesaria para enviar códigos de inicio de sesión 2FA)
+   SMTP_HOST=smtp.example.com
+   SMTP_PORT=587
+   SMTP_USER=tu_usuario_smtp
+   SMTP_PASS=tu_password_smtp
+   SMTP_FROM="Shark Gym <no-reply@example.com>"
    ```
+
+   El inicio de sesión requiere contraseña y un código de seis dígitos enviado al correo registrado. El código vence en 10 minutos y se limita a cinco intentos. La tabla de verificación se crea automáticamente al iniciar la API; el correo debe estar configurado para que el login pueda completarse.
 
 4. **Crear la base de datos**
 
@@ -134,7 +143,8 @@ http://localhost:3000/api/v1
 | Método | Endpoint         | Descripción                   | Auth |
 | ------ | ---------------- | ----------------------------- | ---- |
 | POST   | `/auth/register` | Registrar nuevo usuario       | No   |
-| POST   | `/auth/login`    | Iniciar sesión                | No   |
+| POST   | `/auth/login`    | Verificar contraseña y enviar código 2FA | No |
+| POST   | `/auth/verify-login-code` | Verificar código 2FA e iniciar sesión | No |
 | GET    | `/auth/profile`  | Obtener perfil del usuario    | Sí   |
 | PUT    | `/auth/profile`  | Actualizar perfil del usuario | Sí   |
 | POST   | `/auth/refresh`  | Renovar token JWT             | Sí   |
@@ -193,6 +203,8 @@ Content-Type: application/json
 
 #### 2. Iniciar sesión
 
+El login requiere dos pasos: `/auth/login` valida la contraseña y envía un código de seis dígitos; luego `/auth/verify-login-code` valida el código y devuelve el token de sesión. El código vence en 10 minutos y permite hasta cinco intentos.
+
 ```http
 POST /api/v1/auth/login
 Content-Type: application/json
@@ -221,6 +233,18 @@ Content-Type: application/json
     "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...",
     "expiresIn": "24h"
   }
+}
+```
+
+Después de recibir `challengeId` en la respuesta:
+
+```http
+POST /api/v1/auth/verify-login-code
+Content-Type: application/json
+
+{
+  "challengeId": "identificador-temporal",
+  "code": "123456"
 }
 ```
 

@@ -2,6 +2,7 @@ const Venta = require('../models/Venta');
 const Producto = require('../models/Producto');
 const Membresia = require('../models/Membresia');
 const { pool } = require('../config/database');
+const { sendMembershipConfirmationToUser } = require('../services/pushNotificationService');
 
 exports.getAllSales = async (req, res) => {
     try {
@@ -43,6 +44,7 @@ exports.createSale = async (req, res) => {
         await connection.beginTransaction();
 
         const { usuario_id, producto_id, membresia_id, cantidad, total, tipo } = req.body;
+        let membershipName = null;
 
         if (!tipo || !total) {
             await connection.rollback();
@@ -105,6 +107,7 @@ exports.createSale = async (req, res) => {
             }
 
             const membership = membRows[0];
+            membershipName = membership.nombre;
             
             // Calcular fecha de vencimiento
             const expiry = new Date();
@@ -127,6 +130,12 @@ exports.createSale = async (req, res) => {
         await connection.commit();
 
         const saleId = result.insertId;
+
+        if (tipo === 'membresia' && membershipName) {
+            sendMembershipConfirmationToUser(usuario_id, membershipName, saleId).catch((pushError) => {
+                console.error('Error al enviar push de membresía confirmada:', pushError);
+            });
+        }
 
         // Enviar correo con el PDF adjunto en segundo plano para no demorar la respuesta HTTP
         if (usuario_id) {
