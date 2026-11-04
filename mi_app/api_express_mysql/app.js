@@ -10,7 +10,8 @@ const cors = require('cors');
 require('dotenv').config();
 
 // Netlify functions use an ephemeral filesystem; keep file logging local only.
-if (!process.env.NETLIFY) {
+const isServerless = process.env.NETLIFY || process.env.AWS_LAMBDA_FUNCTION_NAME || process.env.LAMBDA_TASK_ROOT;
+if (!isServerless) {
     const fsLog = require('fs');
     const pathLog = require('path');
     const logFile = pathLog.join(__dirname, 'backend_logs.txt');
