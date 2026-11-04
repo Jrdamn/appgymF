@@ -1,5 +1,5 @@
 import * as SecureStore from 'expo-secure-store';
-import React, { createContext, useContext, useEffect, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useRef, useState } from 'react';
 import { Platform } from 'react-native';
 import api, { setAuthToken } from '../services/api';
 import { registerPushNotifications, unregisterPushNotifications } from '../services/pushNotifications';
@@ -70,7 +70,14 @@ interface AuthContextType {
     isLoading: boolean;
     login: (email: string, password: string) => Promise<{ requiresTwoFactor: true; challengeId: string; maskedEmail: string }>;
     verifyLoginCode: (challengeId: string, code: string) => Promise<void>;
-    register: (nombre: string, email: string, telefono: string, password: string, rol?: number) => Promise<void>;
+    register: (
+        nombre: string,
+        email: string,
+        telefono: string,
+        password: string,
+        termsAccepted: boolean,
+        rol?: number
+    ) => Promise<void>;
     logout: () => Promise<void>;
     refreshProfile: () => Promise<void>;
     updateProfile: (
@@ -92,7 +99,50 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const [token, setToken] = useState<string | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const pushRegistrationRef = React.useRef<Promise<void> | null>(null);
+    const tokenRef = useRef<string | null>(null);
+    const sessionInvalidatedRef = useRef(false);
     const userId = user?.id;
+
+    const clearSession = useCallback(async () => {
+        try {
+            await deleteStorageItem('userToken');
+        } catch (e) {
+            console.warn('Error deleting stored token:', e);
+        }
+        tokenRef.current = null;
+        setAuthToken(null);
+        setUser(null);
+        setToken(null);
+    }, []);
+
+    useEffect(() => {
+        const interceptorId = api.interceptors.response.use(
+            (response) => response,
+            (error) => {
+                const requestUrl = error.config?.url;
+                const isPublicAuthRequest =
+                    requestUrl === '/auth/login' ||
+                    requestUrl === '/auth/verify-login-code' ||
+                    requestUrl === '/auth/register';
+
+                if (
+                    error.response?.status === 401 &&
+                    tokenRef.current &&
+                    !isPublicAuthRequest &&
+                    !sessionInvalidatedRef.current
+                ) {
+                    sessionInvalidatedRef.current = true;
+                    void clearSession();
+                }
+
+                return Promise.reject(error);
+            }
+        );
+
+        return () => {
+            api.interceptors.response.eject(interceptorId);
+        };
+    }, [clearSession]);
 
     useEffect(() => {
         if (userId === undefined || !token) {
@@ -119,6 +169,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
             try {
                 const storedToken = await getStorageItem('userToken');
                 if (storedToken) {
+                    tokenRef.current = storedToken;
                     setToken(storedToken);
                     setAuthToken(storedToken);
 
@@ -140,18 +191,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         };
 
         loadStorageData();
-    }, []);
-
-    const clearSession = async () => {
-        try {
-            await deleteStorageItem('userToken');
-        } catch (e) {
-            console.warn('Error deleting stored token:', e);
-        }
-        setAuthToken(null);
-        setUser(null);
-        setToken(null);
-    };
+    }, [clearSession]);
 
     const login = async (email: string, password: string) => {
         try {
@@ -202,6 +242,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
                     throw new Error('El servidor devolvió una respuesta de autenticación inválida.');
                 }
                 await setStorageItem('userToken', userToken);
+                tokenRef.current = userToken;
+                sessionInvalidatedRef.current = false;
                 setAuthToken(userToken);
                 setToken(userToken);
                 setUser(userData);
@@ -227,9 +269,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         }
     };
 
-    const register = async (nombre: string, email: string, telefono: string, password: string, rol?: number) => {
+    const register = async (
+        nombre: string,
+        email: string,
+        telefono: string,
+        password: string,
+        termsAccepted: boolean,
+        rol?: number
+    ) => {
         try {
-            const response = await api.post('/auth/register', { nombre, email, telefono, password, rol });
+            const response = await api.post('/auth/register', {
+                nombre,
+                email,
+                telefono,
+                password,
+                termsAccepted,
+                rol,
+            });
             if (response.data && response.data.success) {
                 return;
             } else {

@@ -15,6 +15,7 @@ import { useAuth } from '../context/AuthContext';
 import { useTheme } from '../hooks/use-theme';
 import { ThemedText } from './themed-text';
 import { ThemedView } from './themed-view';
+import TermsAndConditionsModal from './TermsAndConditionsModal';
 
 interface RegisterScreenProps {
   onNavigateToLogin: () => void;
@@ -28,6 +29,8 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
   const [email, setEmail] = useState('');
   const [telefono, setTelefono] = useState('');
   const [password, setPassword] = useState('');
+  const [termsAccepted, setTermsAccepted] = useState(false);
+  const [termsVisible, setTermsVisible] = useState(false);
   const rol = 1;
 
   const [loading, setLoading] = useState(false);
@@ -41,6 +44,11 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
   const [passwordFocused, setPasswordFocused] = useState(false);
 
   const handleRegister = async () => {
+    if (!termsAccepted) {
+      setErrorMessage('Debes aceptar los términos y condiciones para crear tu cuenta.');
+      return;
+    }
+
     if (!nombre || !email || !telefono || !password) {
       setErrorMessage('Por favor, completa todos los campos.');
       return;
@@ -56,7 +64,7 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
     setLoading(true);
 
     try {
-      await register(nombre.trim(), email.trim(), telefono.trim(), password, rol);
+      await register(nombre.trim(), email.trim(), telefono.trim(), password, true, rol);
       setSuccessMessage('Cuenta creada. Inicia sesión para verificar tu correo.');
     } catch (error: any) {
       setErrorMessage(error.message || 'Error al registrar el usuario.');
@@ -211,14 +219,46 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
                 />
               </View>
 
+              <View style={styles.termsRow}>
+                <Pressable
+                  accessibilityRole="checkbox"
+                  accessibilityLabel="Acepto los términos y condiciones"
+                  accessibilityState={{ checked: termsAccepted }}
+                  onPress={() => setTermsAccepted((accepted) => !accepted)}
+                  style={styles.checkboxButton}
+                >
+                  <View style={[styles.checkbox, termsAccepted && styles.checkboxChecked]}>
+                    {termsAccepted && <ThemedText style={styles.checkmark}>✓</ThemedText>}
+                  </View>
+                </Pressable>
+                <View style={styles.termsCopy}>
+                  <ThemedText type="small" themeColor="textSecondary">
+                    He leído y acepto los términos y condiciones.
+                  </ThemedText>
+                  <Pressable
+                    accessibilityRole="button"
+                    onPress={() => setTermsVisible(true)}
+                    hitSlop={6}
+                    style={styles.termsLink}
+                  >
+                    <ThemedText type="smallBold" style={styles.linkText}>
+                      Leer términos y condiciones
+                    </ThemedText>
+                  </Pressable>
+                </View>
+              </View>
+
               {/* Submit Button */}
               <Pressable
                 style={({ pressed }) => [
                   styles.button,
-                  { backgroundColor: '#3c87f7', opacity: pressed || loading ? 0.8 : 1 },
+                  {
+                    backgroundColor: '#3c87f7',
+                    opacity: pressed || loading ? 0.8 : termsAccepted ? 1 : 0.5,
+                  },
                 ]}
                 onPress={handleRegister}
-                disabled={loading}
+                disabled={loading || !termsAccepted}
               >
                 {loading ? (
                   <ActivityIndicator color="#ffffff" size="small" />
@@ -244,6 +284,10 @@ export default function RegisterScreen({ onNavigateToLogin }: RegisterScreenProp
           </ThemedView>
         </ScrollView>
       </KeyboardAvoidingView>
+      <TermsAndConditionsModal
+        visible={termsVisible}
+        onClose={() => setTermsVisible(false)}
+      />
     </ImageBackground>
   );
 }
@@ -347,6 +391,39 @@ const styles = StyleSheet.create({
   },
   linkText: {
     color: '#3c87f7',
+  },
+  termsRow: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    gap: Spacing.two,
+  },
+  checkboxButton: {
+    paddingTop: 2,
+  },
+  checkbox: {
+    width: 22,
+    height: 22,
+    borderWidth: 1.5,
+    borderColor: '#3c87f7',
+    borderRadius: 5,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  checkboxChecked: {
+    backgroundColor: '#3c87f7',
+  },
+  checkmark: {
+    color: '#ffffff',
+    fontSize: 15,
+    lineHeight: 18,
+  },
+  termsCopy: {
+    flex: 1,
+    gap: Spacing.one,
+  },
+  termsLink: {
+    alignSelf: 'flex-start',
+    paddingVertical: 2,
   },
   backButton: {
     flexDirection: 'row',

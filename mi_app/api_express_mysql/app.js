@@ -9,33 +9,35 @@ const express = require('express');
 const cors = require('cors');
 require('dotenv').config();
 
-// Redireccionar consola a archivo de logs
-const fsLog = require('fs');
-const pathLog = require('path');
-const logFile = pathLog.join(__dirname, 'backend_logs.txt');
-fsLog.writeFileSync(logFile, '--- INICIO LOGS DE DIAGNÓSTICO --- \n', 'utf8');
+// Netlify functions use an ephemeral filesystem; keep file logging local only.
+if (!process.env.NETLIFY) {
+    const fsLog = require('fs');
+    const pathLog = require('path');
+    const logFile = pathLog.join(__dirname, 'backend_logs.txt');
+    fsLog.writeFileSync(logFile, '--- INICIO LOGS DE DIAGNÓSTICO --- \n', 'utf8');
 
-const originalLog = console.log;
-const originalError = console.error;
-const originalWarn = console.warn;
+    const originalLog = console.log;
+    const originalError = console.error;
+    const originalWarn = console.warn;
 
-console.log = function(...args) {
-    originalLog.apply(console, args);
-    const msg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
-    fsLog.appendFileSync(logFile, `[LOG] ${new Date().toISOString()} - ${msg}\n`, 'utf8');
-};
+    console.log = function(...args) {
+        originalLog.apply(console, args);
+        const msg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+        fsLog.appendFileSync(logFile, `[LOG] ${new Date().toISOString()} - ${msg}\n`, 'utf8');
+    };
 
-console.error = function(...args) {
-    originalError.apply(console, args);
-    const msg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
-    fsLog.appendFileSync(logFile, `[ERROR] ${new Date().toISOString()} - ${msg}\n`, 'utf8');
-};
+    console.error = function(...args) {
+        originalError.apply(console, args);
+        const msg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+        fsLog.appendFileSync(logFile, `[ERROR] ${new Date().toISOString()} - ${msg}\n`, 'utf8');
+    };
 
-console.warn = function(...args) {
-    originalWarn.apply(console, args);
-    const msg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
-    fsLog.appendFileSync(logFile, `[WARN] ${new Date().toISOString()} - ${msg}\n`, 'utf8');
-};
+    console.warn = function(...args) {
+        originalWarn.apply(console, args);
+        const msg = args.map(arg => typeof arg === 'object' ? JSON.stringify(arg) : arg).join(' ');
+        fsLog.appendFileSync(logFile, `[WARN] ${new Date().toISOString()} - ${msg}\n`, 'utf8');
+    };
+}
 
 // Importar configuraciones y middlewares
 const { testConnection } = require('./config/database');
@@ -67,11 +69,23 @@ const API_PREFIX = process.env.API_PREFIX || '/api/v1';
 app.use(express.json({ limit: '10mb' }));
 app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 
+const allowedOrigins = [
+    process.env.FRONTEND_URL,
+    process.env.URL,
+    process.env.DEPLOY_PRIME_URL
+].filter(Boolean);
+const isProduction = process.env.NODE_ENV === 'production' || process.env.NETLIFY === 'true';
+
 // Middleware para CORS
 app.use(cors({
-    origin: process.env.NODE_ENV === 'production' 
-        ? ['https://tu-dominio.com'] // Cambiar por tu dominio en producción
-        : true, // En desarrollo, permitir todos los orígenes
+    origin: isProduction
+        ? (origin, callback) => {
+            if (!origin || allowedOrigins.includes(origin)) {
+                return callback(null, true);
+            }
+            return callback(new Error('Origen no permitido por CORS'));
+        }
+        : true,
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
@@ -83,7 +97,7 @@ app.use(sanitizeInput);
 app.use(validateJSON);
 
 // Middleware para logging de requests (solo en desarrollo)
-if (process.env.NODE_ENV !== 'production') {
+if (!isProduction) {
     app.use((req, res, next) => {
         console.log(`${new Date().toISOString()} - ${req.method} ${req.url}`);
         next();
@@ -233,7 +247,7 @@ app.use((err, req, res, next) => {
     res.status(err.status || 500).json({
         success: false,
         message: 'Error interno del servidor',
-        error: process.env.NODE_ENV === 'production' 
+        error: isProduction
             ? 'Algo salió mal en el servidor' 
             : err.message,
         timestamp: new Date().toISOString()

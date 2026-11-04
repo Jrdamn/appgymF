@@ -1,0 +1,22 @@
+[build]
+command = "npm ci --prefix mi_app/api_express_mysql && npm ci --prefix login_app && npm run build:web --prefix login_app"
+publish = "login_app/dist"
+
+[build.environment]
+EXPO_PUBLIC_API_URL = "/api/v1"
+NODE_ENV = "production"
+NODE_VERSION = "22"
+
+[functions]
+directory = "mi_app/api_express_mysql/netlify/functions"
+node_bundler = "esbuild"
+
+[[redirects]]
+from = "/api/*"
+to = "/.netlify/functions/api/:splat"
+status = 200
+
+[[redirects]]
+from = "/health"
+to = "/.netlify/functions/api/health"
+status = 200

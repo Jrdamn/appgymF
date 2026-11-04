@@ -2,6 +2,22 @@
 
 Una API REST completa para gestión de usuarios desarrollada con Node.js, Express y MySQL. Incluye operaciones CRUD completas, validaciones, paginación y documentación.
 
+## Despliegue de Shark Gym en Netlify
+
+La configuración `netlify.toml` en la raíz del repositorio publica la app web de `login_app` y sirve esta API mediante una Netlify Function. La base de datos MySQL debe estar alojada externamente y aceptar conexiones desde Netlify.
+
+Al conectar el repositorio en Netlify, deja la carpeta base en la raíz del repositorio y usa la configuración de `netlify.toml`. Agrega estas variables en la configuración del sitio de Netlify; no las guardes en el repositorio. Usa como `FRONTEND_URL` la URL HTTPS asignada al sitio:
+
+- `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- `JWT_SECRET`: clave aleatoria y privada, distinta de cualquier clave de desarrollo
+- `FRONTEND_URL`: URL HTTPS del sitio publicado en Netlify
+- `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`: necesarios para los códigos de acceso por correo
+- `SMTP_FROM`: opcional, remitente de los correos
+- `PAYPAL_CLIENT_ID` y `PAYPAL_CLIENT_SECRET`: si se habilitan pagos con PayPal
+- `SCANNER_PIN`: opcional, PIN del lector de accesos
+
+La función verifica la conexión a MySQL en su primera solicitud y prepara las tablas mediante la rutina existente. Verifica el resultado en `/health`. Las funciones de Netlify tienen límites de ejecución y tamaño de solicitud; para archivos grandes o tráfico sostenido, conviene alojar la API en un servicio Node persistente y mantener la web en Netlify.
+
 ## 🚀 Características
 
 - **Autenticación JWT**: Sistema completo de registro, login y autenticación
@@ -176,9 +192,12 @@ Content-Type: application/json
   "nombre": "Juan Pérez",
   "email": "juan@ejemplo.com",
   "telefono": "+1234567890",
-  "password": "MiPassword123!"
+  "password": "MiPassword123!",
+  "termsAccepted": true
 }
 ```
+
+`termsAccepted` debe ser `true`; si no se acepta, el servidor rechaza la creación de la cuenta.
 
 **Respuesta:**
 

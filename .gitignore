@@ -1,6 +1,7 @@
 # Dependencias y temporales
 node_modules/
 .expo/
+.netlify/
 .vscode/
 .idea/
 npm-debug.log*

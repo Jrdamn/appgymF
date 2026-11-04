@@ -72,6 +72,10 @@ const validateRegister = [
         .isLength({ min: 7, max: 20 })
         .withMessage('El teléfono debe tener entre 7 y 20 caracteres'),
 
+    body('termsAccepted')
+        .custom((value) => value === true)
+        .withMessage('Debes aceptar los términos y condiciones para crear una cuenta'),
+
     body('password')
         .isLength({ min: 8, max: 128 })
         .withMessage('La contraseña debe tener entre 8 y 128 caracteres')

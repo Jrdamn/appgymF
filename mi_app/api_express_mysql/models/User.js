@@ -279,14 +279,14 @@ class User {
     static async paginate(page = 1, limit = 10) {
         try {
             // Asegurar que page y limit sean números enteros
-            const pageInt = parseInt(page) || 1;
-            const limitInt = parseInt(limit) || 10;
-            const offset = (pageInt - 1) * limitInt;
+            let pageInt = parseInt(page, 10) || 1;
+            let limitInt = parseInt(limit, 10) || 10;
             
             // Validar parámetros
             if (pageInt < 1) pageInt = 1;
             if (limitInt < 1) limitInt = 10;
             if (limitInt > 100) limitInt = 100; // Límite máximo
+            const offset = (pageInt - 1) * limitInt;
             
             // Obtener usuarios paginados usando interpolación directa
             const [users] = await pool.execute(
