@@ -1,8 +1,53 @@
 const https = require('https');
+const crypto = require('crypto');
+const webPush = require('web-push');
 const { pool } = require('../config/database');
 
 const EXPO_PUSH_URL = 'https://exp.host/--/api/v2/push/send';
 const MAX_MESSAGES_PER_REQUEST = 100;
+
+const sendWebPushNotifications = async (subscriptions, notification) => {
+    const { VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY, VAPID_SUBJECT } = process.env;
+    if (!VAPID_PUBLIC_KEY || !VAPID_PRIVATE_KEY || !VAPID_SUBJECT) {
+        throw new Error('Falta configurar VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY o VAPID_SUBJECT');
+    }
+
+    webPush.setVapidDetails(VAPID_SUBJECT, VAPID_PUBLIC_KEY, VAPID_PRIVATE_KEY);
+    const results = await Promise.allSettled(subscriptions.map(async (row) => {
+        const subscription = {
+            endpoint: row.endpoint,
+            keys: {
+                p256dh: row.p256dh,
+                auth: row.auth
+            }
+        };
+
+        try {
+            await webPush.sendNotification(subscription, JSON.stringify(notification));
+            return true;
+        } catch (error) {
+            if (error.statusCode === 404 || error.statusCode === 410) {
+                await pool.execute(
+                    'DELETE FROM web_push_subscriptions WHERE endpoint_hash = ?',
+                    [row.endpoint_hash]
+                );
+            }
+            throw error;
+        }
+    }));
+
+    const sentCount = results.filter((result) => result.status === 'fulfilled').length;
+    if (sentCount > 0) return sentCount;
+
+    const failureMessages = results
+        .filter((result) => result.status === 'rejected')
+        .map((result) => result.reason.message);
+    if (failureMessages.length) {
+        throw new Error(`No se pudo enviar push web: ${failureMessages.join('; ')}`);
+    }
+
+    return 0;
+};
 
 const sendExpoMessages = (messages) => new Promise((resolve, reject) => {
     const request = https.request(EXPO_PUSH_URL, {
@@ -54,15 +99,22 @@ const sendExpoMessages = (messages) => new Promise((resolve, reject) => {
 });
 
 exports.sendPushNotificationToUser = async (userId, notification) => {
-    const [rows] = await pool.execute(
-        'SELECT expo_push_token FROM push_tokens WHERE usuario_id = ?',
-        [userId]
-    );
-    if (rows.length === 0) {
+    const [[expoRows], [webRows]] = await Promise.all([
+        pool.execute(
+            'SELECT expo_push_token FROM push_tokens WHERE usuario_id = ?',
+            [userId]
+        ),
+        pool.execute(
+            'SELECT endpoint_hash, endpoint, p256dh, auth FROM web_push_subscriptions WHERE usuario_id = ?',
+            [userId]
+        )
+    ]);
+
+    if (expoRows.length === 0 && webRows.length === 0) {
         return false;
     }
 
-    const messages = rows.map(({ expo_push_token: to }) => ({
+    const messages = expoRows.map(({ expo_push_token: to }) => ({
         to,
         sound: 'default',
         title: notification.title,
@@ -72,10 +124,23 @@ exports.sendPushNotificationToUser = async (userId, notification) => {
         priority: 'high'
     }));
 
+    const deliveryTasks = [];
     for (let index = 0; index < messages.length; index += MAX_MESSAGES_PER_REQUEST) {
-        await sendExpoMessages(messages.slice(index, index + MAX_MESSAGES_PER_REQUEST));
+        deliveryTasks.push(sendExpoMessages(messages.slice(index, index + MAX_MESSAGES_PER_REQUEST)));
     }
-    return true;
+    if (webRows.length > 0) {
+        deliveryTasks.push(sendWebPushNotifications(webRows, notification));
+    }
+
+    const results = await Promise.allSettled(deliveryTasks);
+    if (results.some((result) => result.status === 'fulfilled')) {
+        return true;
+    }
+
+    const failureMessages = results
+        .filter((result) => result.status === 'rejected')
+        .map((result) => result.reason.message);
+    throw new Error(`No se pudo enviar la notificación: ${failureMessages.join('; ')}`);
 };
 
 exports.sendTestPushNotificationToUser = (userId) =>

@@ -14,8 +14,12 @@ Al conectar el repositorio en Netlify, deja la carpeta base en la raíz del repo
 - `FRONTEND_URL`: URL HTTPS del sitio publicado en Netlify
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`: necesarios para los códigos de acceso por correo
 - `SMTP_FROM`: opcional, remitente de los correos
+- `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`: habilitan el envío de notificaciones push a navegadores web
+- `EXPO_PUBLIC_WEB_PUSH_PUBLIC_KEY`: la misma clave pública VAPID, disponible durante el build web
 - `PAYPAL_CLIENT_ID` y `PAYPAL_CLIENT_SECRET`: si se habilitan pagos con PayPal
 - `SCANNER_PIN`: opcional, PIN del lector de accesos
+
+Para Web Push, genera un par de claves VAPID desde `mi_app/api_express_mysql` con `npx web-push generate-vapid-keys`. Configura la clave privada como secreto y no la publiques. `VAPID_SUBJECT` debe ser un contacto `mailto:` o URL válida. Configura la clave pública tanto como `VAPID_PUBLIC_KEY` en las funciones como `EXPO_PUBLIC_WEB_PUSH_PUBLIC_KEY` en el build web. Los usuarios activan las notificaciones desde el botón de prueba en su perfil; el navegador solicitará permiso.
 
 La función verifica la conexión a MySQL en su primera solicitud y prepara las tablas mediante la rutina existente. Verifica el resultado en `/health`. Las funciones de Netlify tienen límites de ejecución y tamaño de solicitud; para archivos grandes o tráfico sostenido, conviene alojar la API en un servicio Node persistente y mantener la web en Netlify.
 

@@ -28,6 +28,7 @@ import { BottomTabInset, MaxContentWidth, Spacing } from '@/constants/theme';
 import { useAuth } from '@/context/AuthContext';
 import { useTheme } from '@/hooks/use-theme';
 import api from '@/services/api';
+import { activateWebPushNotifications } from '@/services/pushNotifications';
 
 const AVATAR_PRESETS = [
   'https://images.unsplash.com/photo-1534438327276-14e5300c3a48?w=150&auto=format&fit=crop&q=80',
@@ -387,8 +388,22 @@ export default function HomeScreen() {
   const handleTestPushNotification = async () => {
     setTestingPushNotification(true);
     try {
+      if (Platform.OS === 'web') {
+        const registered = await activateWebPushNotifications();
+        if (!registered) {
+          Alert.alert(
+            'Notificaciones no activadas',
+            'Permite las notificaciones del navegador para recibir avisos de Shark Gym.'
+          );
+          return;
+        }
+      }
+
       const response = await api.post('/notifications/test');
-      Alert.alert('Solicitud enviada', response.data?.message || 'Revisa las notificaciones de Android.');
+      Alert.alert(
+        'Solicitud enviada',
+        response.data?.message || 'Revisa las notificaciones de tu dispositivo o navegador.'
+      );
     } catch (error: any) {
       const message = error.response?.data?.message || 'No se pudo enviar la notificación de prueba.';
       Alert.alert('No se pudo probar', message);
@@ -1634,7 +1649,7 @@ export default function HomeScreen() {
                     )}
                   </ThemedView>
 
-                  {!isEditing && Platform.OS === 'android' && (
+                  {!isEditing && (Platform.OS === 'android' || Platform.OS === 'web') && (
                     <Pressable
                       style={({ pressed }) => [
                         styles.pushTestButton,
@@ -1647,7 +1662,9 @@ export default function HomeScreen() {
                         <ActivityIndicator size="small" color="#ffffff" />
                       ) : (
                         <ThemedText type="smallBold" style={styles.pushTestButtonText}>
-                          Enviar notificación de prueba
+                          {Platform.OS === 'web'
+                            ? 'Activar y probar notificaciones web'
+                            : 'Enviar notificación de prueba'}
                         </ThemedText>
                       )}
                     </Pressable>

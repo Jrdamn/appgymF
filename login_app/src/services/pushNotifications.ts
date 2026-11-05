@@ -6,6 +6,53 @@ import api from './api';
 
 const PUSH_TOKEN_STORAGE_KEY = 'expoPushToken';
 
+const getWebPushSubscription = async (requestPermission: boolean): Promise<PushSubscription | null> => {
+    if (
+        Platform.OS !== 'web' ||
+        typeof window === 'undefined' ||
+        !('serviceWorker' in navigator) ||
+        !('PushManager' in window) ||
+        !('Notification' in window) ||
+        !window.isSecureContext
+    ) {
+        return null;
+    }
+
+    const publicKey = process.env.EXPO_PUBLIC_WEB_PUSH_PUBLIC_KEY;
+    if (!publicKey) {
+        if (requestPermission) {
+            throw new Error('Las notificaciones web aún no están configuradas en el sitio.');
+        }
+        return null;
+    }
+
+    let permission = Notification.permission;
+    if (permission !== 'granted' && requestPermission) {
+        permission = await Notification.requestPermission();
+    }
+    if (permission !== 'granted') return null;
+
+    const registration = await navigator.serviceWorker.register('/push-sw.js');
+    await navigator.serviceWorker.ready;
+    const existingSubscription = await registration.pushManager.getSubscription();
+    const subscription = existingSubscription ?? await registration.pushManager.subscribe({
+        userVisibleOnly: true,
+        applicationServerKey: urlBase64ToUint8Array(publicKey) as BufferSource,
+    });
+
+    await api.post('/notifications/web-subscription', {
+        subscription: subscription.toJSON(),
+    });
+    return subscription;
+};
+
+const urlBase64ToUint8Array = (value: string): Uint8Array => {
+    const padding = '='.repeat((4 - value.length % 4) % 4);
+    const base64 = `${value}${padding}`.replace(/-/g, '+').replace(/_/g, '/');
+    const rawData = window.atob(base64);
+    return Uint8Array.from(rawData, (character) => character.charCodeAt(0));
+};
+
 Notifications.setNotificationHandler({
     handleNotification: async () => ({
         shouldPlaySound: true,
@@ -16,6 +63,11 @@ Notifications.setNotificationHandler({
 });
 
 export async function registerPushNotifications(): Promise<void> {
+    if (Platform.OS === 'web') {
+        await getWebPushSubscription(false);
+        return;
+    }
+
     if (Platform.OS !== 'android') {
         return;
     }
@@ -47,7 +99,24 @@ export async function registerPushNotifications(): Promise<void> {
     await SecureStore.setItemAsync(PUSH_TOKEN_STORAGE_KEY, expoPushToken);
 }
 
+export async function activateWebPushNotifications(): Promise<boolean> {
+    const subscription = await getWebPushSubscription(true);
+    return subscription !== null;
+}
+
 export async function unregisterPushNotifications(): Promise<void> {
+    if (Platform.OS === 'web') {
+        if (!('serviceWorker' in navigator)) return;
+        const registration = await navigator.serviceWorker.getRegistration('/');
+        const subscription = await registration?.pushManager.getSubscription();
+        if (subscription) {
+            await api.delete('/notifications/web-subscription', {
+                data: { endpoint: subscription.endpoint },
+            });
+        }
+        return;
+    }
+
     if (Platform.OS !== 'android') {
         return;
     }
