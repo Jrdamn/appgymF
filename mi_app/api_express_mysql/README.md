@@ -9,6 +9,7 @@ La configuración `netlify.toml` en la raíz del repositorio publica la app web 
 Al conectar el repositorio en Netlify, deja la carpeta base en la raíz del repositorio y usa la configuración de `netlify.toml`. Agrega estas variables en la configuración del sitio de Netlify; no las guardes en el repositorio. Usa como `FRONTEND_URL` la URL HTTPS asignada al sitio:
 
 - `DB_HOST`, `DB_PORT`, `DB_USER`, `DB_PASSWORD`, `DB_NAME`
+- `DB_SSL`: configúralo como `true` para bases administradas que requieren TLS, como TiDB Cloud Starter
 - `JWT_SECRET`: clave aleatoria y privada, distinta de cualquier clave de desarrollo
 - `FRONTEND_URL`: URL HTTPS del sitio publicado en Netlify
 - `SMTP_HOST`, `SMTP_PORT`, `SMTP_USER`, `SMTP_PASS`: necesarios para los códigos de acceso por correo

@@ -16,6 +16,7 @@ const dbConfig = {
     user: process.env.DB_USER || 'root',
     password: process.env.DB_PASSWORD || 'password',
     database: process.env.DB_NAME || 'usuarios_db',
+    ssl: process.env.DB_SSL === 'true' ? {} : undefined,
     waitForConnections: true,
     connectionLimit: 10,
     queueLimit: 0
