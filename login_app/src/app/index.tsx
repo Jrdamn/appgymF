@@ -387,26 +387,35 @@ export default function HomeScreen() {
 
   const handleTestPushNotification = async () => {
     setTestingPushNotification(true);
+    setErrorMessage(null);
+    setSuccessMessage(null);
     try {
       if (Platform.OS === 'web') {
         const registered = await activateWebPushNotifications();
         if (!registered) {
-          Alert.alert(
-            'Notificaciones no activadas',
-            'Permite las notificaciones del navegador para recibir avisos de Shark Gym.'
+          setErrorMessage(
+            'No se activaron las notificaciones. Permite las notificaciones del sitio en tu navegador e inténtalo de nuevo.'
           );
           return;
         }
       }
 
       const response = await api.post('/notifications/test');
-      Alert.alert(
-        'Solicitud enviada',
-        response.data?.message || 'Revisa las notificaciones de tu dispositivo o navegador.'
-      );
+      const message = response.data?.message || 'Revisa las notificaciones de tu dispositivo o navegador.';
+      if (Platform.OS === 'web') {
+        setSuccessMessage(`${message}. Si no aparece, revisa que el navegador permita notificaciones.`);
+      } else {
+        Alert.alert('Solicitud enviada', message);
+      }
     } catch (error: any) {
-      const message = error.response?.data?.message || 'No se pudo enviar la notificación de prueba.';
-      Alert.alert('No se pudo probar', message);
+      const message = error.response?.data?.message
+        || error.message
+        || 'No se pudo enviar la notificación de prueba.';
+      if (Platform.OS === 'web') {
+        setErrorMessage(message);
+      } else {
+        Alert.alert('No se pudo probar', message);
+      }
     } finally {
       setTestingPushNotification(false);
     }
