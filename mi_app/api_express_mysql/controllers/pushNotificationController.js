@@ -197,7 +197,9 @@ exports.sendTestNotification = async (req, res) => {
         console.error('Error al enviar notificación de prueba:', error);
         return res.status(502).json({
             success: false,
-            message: 'No se pudo enviar la notificación de prueba'
+            message: error instanceof Error
+                ? `No se pudo enviar la notificación de prueba: ${error.message}`
+                : 'No se pudo enviar la notificación de prueba'
         });
     }
 };
