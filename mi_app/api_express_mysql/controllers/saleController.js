@@ -3,6 +3,7 @@ const Producto = require('../models/Producto');
 const Membresia = require('../models/Membresia');
 const { pool } = require('../config/database');
 const { sendMembershipConfirmationToUser } = require('../services/pushNotificationService');
+const { createInAppNotification } = require('../services/inAppNotificationService');
 
 exports.getAllSales = async (req, res) => {
     try {
@@ -126,6 +127,14 @@ exports.createSale = async (req, res) => {
             'INSERT INTO ventas (usuario_id, producto_id, membresia_id, cantidad, total, tipo) VALUES (?, ?, ?, ?, ?, ?)',
             [usuario_id || null, producto_id || null, membresia_id || null, cantidad || 1, total, tipo]
         );
+
+        if (tipo === 'membresia' && membershipName) {
+            await createInAppNotification(
+                usuario_id,
+                `Tu membresía ${membershipName} fue activada. ¡Nos vemos en Shark Gym!`,
+                connection
+            );
+        }
 
         await connection.commit();
 

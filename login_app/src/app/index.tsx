@@ -803,7 +803,7 @@ export default function HomeScreen() {
                           <ThemedText style={{ fontSize: 24 }}>🔔</ThemedText>
                           <View style={{ flex: 1, gap: 4 }}>
                             <ThemedText style={{ color: '#208AEF', fontWeight: '800', fontSize: 13, textTransform: 'uppercase', letterSpacing: 0.5 }}>
-                              ¡Nueva Rutina Asignada!
+                              Notificación de Shark Gym
                             </ThemedText>
                             <ThemedText style={{ color: '#d0d0d5', fontSize: 13, lineHeight: 18 }}>
                               {unreadNotifications[0].mensaje}
