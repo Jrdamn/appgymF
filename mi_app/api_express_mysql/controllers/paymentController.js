@@ -161,9 +161,17 @@ exports.capturePaypalOrder = async (req, res) => {
         const saleId = result.insertId;
 
         if (tipo === 'membresia' && membershipName) {
-            sendMembershipConfirmationToUser(usuario_id, membershipName, saleId).catch((pushError) => {
+            try {
+                const notificationSent = await sendMembershipConfirmationToUser(usuario_id, membershipName, saleId);
+                if (!notificationSent) {
+                    console.warn('No hay un dispositivo o navegador registrado para la notificación de membresía:', {
+                        usuario_id,
+                        saleId
+                    });
+                }
+            } catch (pushError) {
                 console.error('Error al enviar push de membresía confirmada:', pushError);
-            });
+            }
         }
 
         // 3. Enviar correo con recibo PDF en segundo plano
@@ -329,9 +337,17 @@ exports.processCardPayment = async (req, res) => {
         const saleId = result.insertId;
 
         if (tipo === 'membresia' && membershipName) {
-            sendMembershipConfirmationToUser(usuario_id, membershipName, saleId).catch((pushError) => {
+            try {
+                const notificationSent = await sendMembershipConfirmationToUser(usuario_id, membershipName, saleId);
+                if (!notificationSent) {
+                    console.warn('No hay un dispositivo o navegador registrado para la notificación de membresía:', {
+                        usuario_id,
+                        saleId
+                    });
+                }
+            } catch (pushError) {
                 console.error('Error al enviar push de membresía confirmada:', pushError);
-            });
+            }
         }
 
         // 3. Enviar correo con recibo PDF en segundo plano
