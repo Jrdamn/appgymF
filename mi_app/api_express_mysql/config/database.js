@@ -281,6 +281,19 @@ const setupDatabase = async () => {
         `);
 
         await pool.execute(`
+            CREATE TABLE IF NOT EXISTS tareas_usuario (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                usuario_id INT NOT NULL,
+                titulo VARCHAR(255) NOT NULL,
+                completada TINYINT(1) NOT NULL DEFAULT 0,
+                fecha_creacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                fecha_actualizacion TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+                INDEX idx_tareas_usuario (usuario_id, completada, fecha_creacion),
+                FOREIGN KEY (usuario_id) REFERENCES usuarios(id) ON DELETE CASCADE
+            ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+        `);
+
+        await pool.execute(`
             CREATE TABLE IF NOT EXISTS push_tokens (
                 id INT AUTO_INCREMENT PRIMARY KEY,
                 usuario_id INT NOT NULL,

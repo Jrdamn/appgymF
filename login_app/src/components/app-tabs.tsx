@@ -121,6 +121,7 @@ export default function AppTabs() {
         <Tabs.Screen name="plans" />
         <Tabs.Screen name="routines" />
         <Tabs.Screen name="explore" />
+        <Tabs.Screen name="tasks" options={{ href: null }} />
       </Tabs>
 
       {/* Floating Hamburger Button */}
@@ -278,6 +279,19 @@ export default function AppTabs() {
                   <ThemedText style={styles.drawerLinkText}>
                     {isAdmin ? 'Asignar Rutinas' : 'Rutinas de Ejercicio'}
                   </ThemedText>
+                </Pressable>
+
+                <Pressable
+                  style={({ pressed }) => [styles.drawerLink, pressed && styles.drawerLinkPressed]}
+                  onPress={() => {
+                    setMenuVisible(false);
+                    router.push({ pathname: './tasks' });
+                  }}
+                >
+                  <View style={[styles.drawerIconBadge, { backgroundColor: 'rgba(32, 138, 239, 0.15)' }]}>
+                    <ThemedText style={styles.drawerLinkIcon}>📝</ThemedText>
+                  </View>
+                  <ThemedText style={styles.drawerLinkText}>Mi lista de tareas</ThemedText>
                 </Pressable>
 
                 {/* Link: Gestión de Usuarios */}

@@ -53,6 +53,7 @@ const saleRoutes = require('./routes/saleRoutes');
 const checkinRoutes = require('./routes/checkinRoutes');
 const paymentRoutes = require('./routes/paymentRoutes');
 const routineRoutes = require('./routes/routineRoutes');
+const taskRoutes = require('./routes/taskRoutes');
 const pushNotificationRoutes = require('./routes/pushNotificationRoutes');
 
 // Crear aplicación Express
@@ -159,6 +160,7 @@ app.use(`${API_PREFIX}/sales`, saleRoutes);
 app.use(`${API_PREFIX}/checkins`, checkinRoutes);
 app.use(`${API_PREFIX}/payments`, paymentRoutes);
 app.use(`${API_PREFIX}/routines`, routineRoutes);
+app.use(`${API_PREFIX}/tasks`, taskRoutes);
 app.use(`${API_PREFIX}/notifications`, pushNotificationRoutes);
 
 // Ruta para documentación básica
